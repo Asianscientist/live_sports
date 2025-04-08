@@ -1,9 +1,15 @@
-import redis
 import json
+from database.redis import get_redis
+import asyncio
 
-r = redis.Redis(host="localhost", port=6379, db=0)
-goal_data = {
-    "scorer": "Jude Bellingham",
-    "minute": "24"
-}
-r.publish("match:1208756:goals", json.dumps(goal_data))
+redis_client=get_redis()
+
+async def publish_goal():
+    channel="match:1208769:goals"
+    goal_data = {
+        "scorer": "Ferran Torres",
+        "minute": 24
+    }
+    await redis_client.publish(channel, json.dumps(goal_data))
+    
+asyncio.run(publish_goal())
