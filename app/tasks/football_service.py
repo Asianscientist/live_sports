@@ -16,7 +16,7 @@ router = APIRouter(prefix="", tags=["fixtures"])
 async def get_live_matches(curr_user:str=Depends(get_current_user)):
     user_id=curr_user.id
     favorite_leagues=await redis_client.hget(f"user:{user_id}", "favorite_leagues")
-    matches=await sport_api.get_live_matches(favorite_leagues)
+    matches=await sport_api.get_current_matches(favorite_leagues, user_id)
     return matches
 
 @router.get('/upcoming-matches')
@@ -32,7 +32,15 @@ async def get_upcoming_matches(curr_user:str=Depends(get_current_user)):
 @router.post('/subscribe-matches')
 async def subscribe_matches(fixture_ids:List[int], curr_user=Depends(get_current_user)):
     user_id=curr_user.id
-    await redis_client.hset(f"user:{user_id}", "subscribed_matches", json.dumps(fixture_ids))
+    key_pair=f"user:{user_id}"
+    await redis_client.hset(key_pair, "subscribed_matches", json.dumps(fixture_ids))
+    await redis_client.expire(key_pair, 7 * 24 * 60 * 60) # a week
+    matches=json.loads(await redis_client.hget(f"user:{user_id}", "subscribed_matches"))
+    return f"You subscribed to these matches {matches}"
+
+@router.get('/get-subscribed-matches')
+async def get_subscribed_matches(curr_user=Depends(get_current_user)):
+    user_id=curr_user.id
     matches=json.loads(await redis_client.hget(f"user:{user_id}", "subscribed_matches"))
     return f"You subscribed to these matches {matches}"
 
