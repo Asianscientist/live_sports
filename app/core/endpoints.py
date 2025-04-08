@@ -21,9 +21,9 @@ async def websocket_endpoint(websocket:WebSocket, token:str):
     # user_prefs=await 
     # subscribed_matches=sport_api.get_current_matches([])
     subscribed_matches = json.loads(await redis_client.hget(
-        {"user_id": user.id},
-        {"subscribed_matches": 1}
-    ))
+    f"user:{user.id}",  
+    "subscribed_matches") or "[]") 
+     
     await manager.connect(websocket, user.id)
 
     for match_id in subscribed_matches:
