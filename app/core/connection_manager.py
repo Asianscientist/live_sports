@@ -23,21 +23,21 @@ class GoalAlertManager:
 
     async def subscribe_to_match(self, user_id:str, match_id:int):
         pubsub=self.redis_client.pubsub()
-        await pubsub.subscribe(f"match:{match_id}:goals")
-        asyncio.create_task(self.listen_for_goals(pubsub, user_id))
+        channel_name=f"match:{match_id}:goals"
+        await pubsub.subscribe(channel_name)
+        asyncio.create_task(self.listen_for_goals(pubsub, user_id, match_id))
 
-    async def listen_for_goals(self, pubsub, user_id):
+    async def listen_for_goals(self, pubsub, user_id, match_id):
         async with pubsub:
-            while user_id in self.user_websockets:
-                try:
-                    message=await pubsub.get_message(ignore_subscribe_message=True)
-                    if message:
-                        goal_data=json.loads(message['data'])
+            try:
+                async for message in pubsub.listen():
+                    if message['type']=='message':
+                        goal_data=json.loads(message['data'].decode('utf-8'))
                         await self.send_alerts(user_id, goal_data)
-                except Exception as e:
-                    print(f"Alert error: {e}")
-                    await asyncio.sleep(5)
-    
+            except Exception as e:
+                print(f"Alert error: {e}")
+                await asyncio.sleep(5)
+
     async def send_alerts(self, user_id, goal_data):
         websocket=self.user_websockets.get(user_id)
         if websocket:
