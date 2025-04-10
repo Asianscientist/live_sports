@@ -63,4 +63,8 @@ async def send_goal_alerts(match_id:int, subscribers:list):
                 print(f"Error: {e}")
                 await asyncio.sleep(5)
 
-                
+@router.get('/relevant-live-matches')
+async def get_live_subscribed_matches(curr_user=Depends(get_current_user)):
+    user_id=curr_user.id
+    matches=await sport_api.get_user_relevant_live_matches(user_id)
+    return matches
