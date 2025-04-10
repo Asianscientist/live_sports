@@ -37,7 +37,7 @@ def get_fixtures_byleague_season(league, season='2024'):
 # print(get_fixtures_byleague_season("39","2024"))
 
 async def get_current_matches(leagues, user_id):
-    querystring = {"live":"all"}
+    querystring = {"live":"all"}    
 
     async with httpx.AsyncClient() as client:
         response = requests.get(url, headers=headers, params=querystring)
@@ -141,6 +141,16 @@ async def get_team_statistics(league=39, season='2024', team=None):
         response = requests.get(url, headers=headers, params=querystring)
     return response.json().get('response')
 
+async def get_user_relevant_live_matches(user_id):
+    subs_ids = await redis_client.hget(f"user:{user_id}", "subscribed_matches")
+    fav_leagues=await redis_client.hget(f"user:{user_id}", "favorite_leagues")
+
+    live_matches = await get_current_matches(fav_leagues, user_id)
+    relevant_matches = [
+        match for match in live_matches
+        if match['fixture']['id'] in subs_ids
+    ]
+    return relevant_matches
 
 
 
