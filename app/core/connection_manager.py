@@ -4,6 +4,7 @@ from typing import Dict, List
 from database.redis import get_redis
 import asyncio
 import json
+redis_client=get_redis()
 
 class GoalAlertManager:
     def __init__(self):
@@ -14,11 +15,13 @@ class GoalAlertManager:
     async def connect(self, websocket: WebSocket, user_id: str):
         await websocket.accept()
         self.active_connections[websocket] = user_id
+        await redis_client.sadd('active_users', user_id)
         self.user_websockets[user_id]=websocket
 
-    def disconnect(self, websocket: WebSocket):
+    async def disconnect(self, websocket: WebSocket):
         user_id=self.active_connections.pop(websocket, None)
         if user_id:
+            await redis_client.srem("active_users", user_id)  
             self.user_websockets.pop(user_id, None)
 
     async def subscribe_to_match(self, user_id:str, match_id:int):
@@ -41,6 +44,12 @@ class GoalAlertManager:
     async def send_alerts(self, user_id, goal_data):
         websocket=self.user_websockets.get(user_id)
         if websocket:
-            await websocket.send_text(
-                f"GOAL! {goal_data['scorer']} ({goal_data['minute']}')"
-            )
+            notification = (
+            "⚽ GOAL! ⚽\n"
+            f"🏆 {goal_data['team']}\n"
+            f"👟 Scorer: {goal_data['scorer']}\n"
+            f"🎯 Assist: {goal_data['assist']}\n"
+            f"⏱ Minute: {goal_data['minute']}'\n"
+            f"📊 Score: {goal_data['score']}"
+        )
+            await websocket.send_text(notification)
