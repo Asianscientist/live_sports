@@ -16,13 +16,17 @@ router = APIRouter(prefix="", tags=["fixtures"])
 async def get_live_matches(curr_user:str=Depends(get_current_user)):
     user_id=curr_user.id
     favorite_leagues=await redis_client.hget(f"user:{user_id}", "favorite_leagues")
-    matches=await sport_api.get_current_matches(favorite_leagues, user_id)
+    if not favorite_leagues:
+        return 'Please set favorite leagues first'
+    matches=await sport_api.get_current_matches(json.loads(favorite_leagues), user_id)
     return matches
 
 @router.get('/upcoming-matches')
 async def get_upcoming_matches(curr_user:str=Depends(get_current_user)):
     usr_id=curr_user.id
-    favorite_leagues=json.loads(await redis_client.hget(f"user:{usr_id}", "favorite_leagues"))
+    favorite_leagues=await redis_client.hget(f"user:{usr_id}", "favorite_leagues")
+    if not favorite_leagues:
+        return "You have not choosen favorite leagues"  
     result = []
     for league_id in favorite_leagues:
         matches = await sport_api.get_upcoming_matches(league_id)
