@@ -28,7 +28,6 @@ def get_fixtures_byleague_season(league, season='2024'):
             if fixture_date.date() <= today.date():  # Compare dates
                 filtered_fixtures.append(fixture)
         
-        # Print the filtered fixtures
         if filtered_fixtures:
             return filtered_fixtures
         else:
@@ -144,11 +143,15 @@ async def get_team_statistics(league=39, season='2024', team=None):
 async def get_user_relevant_live_matches(user_id):
     subs_ids = await redis_client.hget(f"user:{user_id}", "subscribed_matches")
     fav_leagues=await redis_client.hget(f"user:{user_id}", "favorite_leagues")
-
+    if not fav_leagues or not subs_ids:
+        return []
+    fav_leagues=json.loads(fav_leagues)
+    subs_ids=json.loads(subs_ids)
     live_matches = await get_current_matches(fav_leagues, user_id)
+    if not live_matches:
+        return []
     relevant_matches = [
-        match for match in live_matches
-        if match['fixture']['id'] in subs_ids
+        match for match in live_matches if int(match['fixture']['id']) in subs_ids
     ]
     return relevant_matches
 
