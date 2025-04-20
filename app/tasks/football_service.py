@@ -41,9 +41,15 @@ async def subscribe_matches(fixture_ids:List[int], curr_user=Depends(get_current
 @router.get('/get-subscribed-matches')
 async def get_subscribed_matches(curr_user=Depends(get_current_user)):
     user_id=curr_user.id
-    matches=json.loads(await redis_client.hget(f"user:{user_id}", "subscribed_matches"))
-    return f"You subscribed to these matches {matches}"
-
+    matches=await redis_client.hget(f"user:{user_id}", "subscribed_matches")
+    if not matches:
+        return "You haven't subscribed to any matches or cache has expired"
+    try:
+        matches = json.loads(matches)
+        return f"You subscribed to these matches {matches}"
+    except json.JSONDecodeError:
+        return "There was an error processing your subscriptions"
+    
 async def send_goal_alerts(match_id:int, subscribers:list):
     pubsub = redis_client.pubsub()
     await pubsub.subscribe(f"match: {match_id}:goals")
